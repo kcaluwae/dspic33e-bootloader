@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=Boot33etesthex
+PROJECTNAME=dspic_main_example
 
 # Active Configuration
 DEFAULTCONF=default

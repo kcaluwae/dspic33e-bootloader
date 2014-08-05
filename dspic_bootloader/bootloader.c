@@ -1,5 +1,5 @@
 /*
- * CAN(CANopen) and UART bootloader for the dsPIC33E bootloader.
+ * CAN(CANopen) and UART bootloader for the dsPIC33E.
  *
  * The UART section of this file is loosely based on the AN1094 application
  * note from Microchip, which is available at:

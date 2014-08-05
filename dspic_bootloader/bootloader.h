@@ -1,5 +1,5 @@
 /*
- * CAN(CANopen) and UART bootloader for the dsPIC33E bootloader.
+ * CAN(CANopen) and UART bootloader for the dsPIC33E.
  *
  * Ken Caluwaerts 2014 <ken@caluwaerts.eu>
  *
@@ -55,7 +55,7 @@ static const char CAN_SERIAL_NUMBER[] = "Ken.";     /*4 bytes*/
 #define BRGVAL          37 //((FCY/BAUDRATE)/16)-1
 
 void put_char(char);
-void cet_char(char*);
+void get_char(char*);
 void write_buffer(char*, int);
 #endif
 
@@ -68,7 +68,7 @@ typedef union ureg32 {
     char val[4];
 } ureg32_t;
 
-void WritePM(char *, ureg32_t);
+void write_PM(char *, ureg32_t);
 
 #ifdef	__cplusplus
 }

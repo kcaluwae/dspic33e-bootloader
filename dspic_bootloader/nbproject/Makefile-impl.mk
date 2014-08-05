@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=Boot33E
+PROJECTNAME=dspic_bootloader
 
 # Active Configuration
 DEFAULTCONF=default
