@@ -25,6 +25,11 @@ Interrupts cannot/should not be used in the bootloader (overwritten by the targe
 
 ####Host
 The main application (/host/python) is written in python and can be used to read Hex files and write them to a device. A basic CAN uploader is provided in Python and a CANopen compatible uploader is integrated into the CanFestival framework. 
+####Directory Structure
+- dspic_bootloader: MPLAB X project for the bootloader (program this to the device once).
+- dspic_main_example: MPLAB X project containing a correctly configured sample application that can be programmed to a device using the bootloader.
+- host: Python and CanFestival tools to upload the code from a host computer to a microcontroller.
+- media: Some videos demonstrating how to use the Python host script.
 
 dsPIC33E vs dsPIC33F
 ------------------
