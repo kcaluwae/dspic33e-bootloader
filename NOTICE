@@ -1,0 +1,8 @@
+CAN(CANopen) and UART bootloader for the dsPIC33E bootloader
+
+Copyright © 2014, Ken Caluwaerts <ken@caluwaerts.eu>.
+All rights reserved.
+
+The UART section of the bootloader.c file is loosely based on the AN1094 application
+note from Microchip, which is available at:
+http://www.microchip.com/stellent/idcplg?IdcService=SS_GET_PAGE&nodeId=1824&appnote=en530200
