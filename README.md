@@ -10,7 +10,6 @@ Features
 - CANopen compatible
 - UART uses 1 memory page, CAN uses 2 or 3 (depending on optimization level) pages
 - Tested on Linux (Ubuntu) and the BeagleBone Black (Angstrom)
-- http://youtu.be/svuVLHAyaHY
 
 Design
 ------------------
@@ -78,7 +77,7 @@ __CODE_LENGTH = 0x29000;
 The target application should not set flash configuration bytes (e.g. _FOSCSEL(FNOSC_FRCPLL & IESO_OFF & PWMLOCK_OFF); ). These values are stored in the last page of program memory and erasing them in the bootloader triggers code protection (see Section 27.1 in http://ww1.microchip.com/downloads/en/DeviceDoc/70000657H.pdf).
 
 ####Uploading an Application to the Device
-The dspic33E_bootloader.py script in host/python loads a Hex file and writes it to a file or device using UART or CAN ('python dspic33E_bootloader.py -h' to see all options, http://youtu.be/kFbsQ2aVa68 for a usage example). 
+The dspic33E_bootloader.py script in host/python loads a Hex file and writes it to a file or device using UART or CAN ('python dspic33E_bootloader.py -h' to see all options, http://youtu.be/kFbsQ2aVa68 or http://youtu.be/svuVLHAyaHY for usage examples). 
 
 The general flow of this tool is: load and parse a hex file, detect memory pages to program, write raw memory pages to file and or device.
 
