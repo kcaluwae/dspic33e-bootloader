@@ -236,6 +236,8 @@ void __attribute__((interrupt, no_auto_psv)) _C1Interrupt(void) {
         m.rtr=1;
         m.len=255;
 
+        LATBbits.LATB12 = !LATBbits.LATB12;
+
         // Obtain the buffer the message was stored into, checking that the value is valid to refer to a buffer
         if (C1VECbits.ICODE < 32) {
             buffer = C1VECbits.ICODE;
@@ -294,9 +296,9 @@ void __attribute__((interrupt, no_auto_psv)) _C1Interrupt(void) {
         // Make sure to clear the interrupt flag.
         C1RXFUL1 = 0;
         C1INTFbits.RBIF = 0;
-        return 1;
+        
     }
-    return 0;
+    IFS2bits.C1IF = 0;
 }
 
 int main(void) {
@@ -332,12 +334,12 @@ int main(void) {
 
     unsigned long a;
     while (1) {
-        //for (a = 0; a < 1500000; ++a);
-        //for (a = 0; a < 1500000; ++a);
+        for (a = 0; a < 1500000; ++a);
+        for (a = 0; a < 1500000; ++a);
         for (a = 0; a < 500000; ++a);
-        LATBbits.LATB12 = 1;
+        LATBbits.LATB12 = !LATBbits.LATB12;
         for (a = 0; a < 500000; ++a);
-        LATBbits.LATB12 = 0;
+        LATBbits.LATB12 = !LATBbits.LATB12;
     }
 
 
