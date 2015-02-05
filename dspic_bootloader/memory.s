@@ -41,7 +41,7 @@
 ;********************************************************************/
 
 .include "p33Exxxx.inc"
-.global _read_latch, _reset_device, _erase_33E, _write_pm_33E ;C called
+.global _write_row_pm_33E, _read_latch, _reset_device, _erase_33E, _write_pm_33E ;C called
 
 _read_latch: 
 	mov	W0,TBLPAG
@@ -127,7 +127,69 @@ _write_pm_33E:
     NOP
     return
 
+
+
+
+_write_row_pm_33E:
+; Define the address from where the programming has to start
+;.equ PROG_ADDR, 0x01800;
+; Load the destination address to be written
+; Writes a full row (128 instructions) to program memory.
+; Make sure that your device supports this!
+;push W9
+;push W8
+;push W3
+; Define the address from where the programming has to start
+;.equ PROG_ADDR, 0x02000
+; Load the NVMADR register with the starting programming address
+;;MOV #tblpage(PROG_ADDR),W9
+;MOV #tbloffset(PROG_ADDR),W8
+;MOV W9,NVMADRU
+;MOV W8,NVMADR
+MOV W0,NVMADRU
+MOV W1,NVMADR
+
+; Setup NVMCON to write 1 row of program memory
+MOV #0x4002,W0
+MOV W0,NVMCON
+; Load the program memory write latches
+; This example loads 128 write latches
+; W2 points to the address of the data to write to the latches
+; Set up a pointer to the first latch location to be written
+MOV #0xFA,W0
+MOV W0,TBLPAG
+MOV #0,W1
+; Perform the TBLWT instructions to write the latches
+; W2 is incremented in the TBLWTH instruction to point to the
+; next instruction location
+MOV #128,W0
+loop:
+;TBLWTL.b [W2++], [W1++]
+;TBLWTL.b [W2++], [W1--]
+;TBLWTH.b [W2++], [W1]
+TBLWTL [W2++],[W1]
+TBLWTH [W2++],[W1++]
+TBLWTL [W2++],[W1]
+TBLWTH [W2++],[W1++]
+;INC2 W1, W1
+DEC W0, W0
+BRA NZ, loop
+; Disable interrupts < priority 7 for next 5 instructions
+; Assumes no level 7 peripheral interrupts
+DISI #06
+; Write the KEY sequence
+MOV #0x55,W0
+MOV W0,NVMKEY
+MOV #0xAA,W0
+MOV W0,NVMKEY
+; Start the programming sequence
+BSET NVMCON,#15
+; Insert two NOPs after programming
+NOP
+NOP
+;pop W3
+;pop W8
+;pop W9
+return
+
 .end
-
-
-

@@ -26,7 +26,15 @@
 extern "C" {
 #endif
 
-/*#define BL_UART */ /*Enable this to use the serial version of the bootloader*/
+/*Enable this to use the serial version of the bootloader*/
+//#define BL_UART
+/*Enable this if your device does not support row writing.
+  If you are not sure, then enable it (all devices support
+  double word writes). The 806/810 devices appear to support
+  row writes (e.g. dsPIC33EPXXXMU8YY), while the 502/506/510
+  devices are limited to double word writes (e.g. dsPIC33EP256GP506).*/
+//#define DOUBLE_WORD_WRITE
+    
 
 /*
 * Program memory page size (1024 instructions for the dsPIC33E
@@ -36,13 +44,17 @@ extern "C" {
 #define PM_ROW_SIZE     1024
 #define FCY             70000000 //70Mhz
 #define BOOT_DELAY      10  /*Bootloader timeout in seconds*/
-#define CAN_NODE_ID 0x3
+#define CAN_NODE_ID 0x72
+#define MOTOR_BOARD
+//#ifndef MOTOR_BOARD
+#define DOUBLE_WORD_WRITE //for some reason the ROW programming mode only works for a single page
+//#endif
 static const char CAN_DEVICE_TYPE[] = "boot";       /*4 bytes*/
 static const char CAN_VENDOR_ID[] = "NASA";         /*4 bytes*/
-static const uint8_t CAN_REVISION_NUM[] = {0,1,0,0};/*4 bytes*/
+static const uint8_t CAN_REVISION_NUM[] = {0,1,0,1};/*4 bytes*/
 static const char CAN_SERIAL_NUMBER[] = "Ken.";     /*4 bytes*/
 
-
+//#define BL_UART
 #ifdef BL_UART
 /*UART specific code*/
 #define COMMAND_NACK     0x00

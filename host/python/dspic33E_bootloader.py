@@ -149,7 +149,7 @@ def write_uC_code_memory(memory,dev_id,fname):
 	
 		#program memory lines
 		for i, idx in enumerate(pic_mem_addr):
-			print "writing program page %d/%d: \t %.6x"%(i,pic_mem_addr.shape[0],idx)
+			print "writing program page %d/%d: \t %.6x\tnum. instr. %d"%(i,pic_mem_addr.shape[0],idx,pic_mem.shape[1])
 			stream.write(bytearray([0x00]))
 			stream.write(bytearray([0x04,0x00]))#1024 instructions per page
 			stream.write(bytearray([idx&0xFF,(idx>>8)&0xFF,(idx>>16)&0xFF])) #page address little endian

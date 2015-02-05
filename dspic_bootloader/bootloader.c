@@ -27,21 +27,31 @@
  *
  */
 #include <stdint.h>
+#include <pps.h>
 #include "p33Exxxx.h"
 #include "bootloader.h"
 #include "canbus.h"
 
-_FOSCSEL(FNOSC_FRCPLL & IESO_OFF & PWMLOCK_OFF);
-/*PWMLOCK_OFF needed to configure PWM*/
+//_FOSCSEL(FNOSC_FRCPLL & IESO_OFF & PWMLOCK_OFF);
+///*PWMLOCK_OFF needed to configure PWM*/
+//_FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_NONE);
+//_FWDT(FWDTEN_OFF);
+///* Disable JTAG */
+//_FICD(JTAGEN_OFF); /* & ICS_PGD2);*/
+//_FGS(GCP_OFF); /* Disable Code Protection */
+
+/*DO NOT USE CONFIGURATION MEMORY (it triggers code protection in the bootloader) */
+_FGS(GWRP_OFF & GSS_OFF & GSSK_OFF); // Disable Code Protection
+_FOSCSEL(FNOSC_FRC & IESO_OFF);
 _FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_NONE);
 _FWDT(FWDTEN_OFF);
-/* Disable JTAG */
-_FICD(JTAGEN_OFF); /* & ICS_PGD2);*/
-_FGS(GCP_OFF); /* Disable Code Protection */
+_FICD(ICS_PGD1 & JTAGEN_OFF);// & RSTPRI_AF);
+
 
 /*defined in memory.s*/
 extern uint32_t read_latch(uint16_t, uint16_t);
 extern void reset_device();
+//extern void write_row_pm_33E(uint16_t,uint16_t,ureg32_t*);
 
 /*This buffer is used to write/read program memory internally*/
 char buffer[PM_ROW_SIZE * 3 + 1];
@@ -61,11 +71,24 @@ int main(void)
      * FOSC = 7.37MHz(74+2)/((0+2)*2(0+1)) = 140.03Mhz
      * Fcy = FOSC/2
      */
+//    PLLFBD = 74;
+//    CLKDIVbits.PLLPRE = 0;
+//    CLKDIVbits.PLLPOST = 0;
+//    while (OSCCONbits.LOCK != 1);
+//    RCONbits.SWDTEN = 0; /* Disable Watch Dog Timer*/
+
     PLLFBD = 74;
     CLKDIVbits.PLLPRE = 0;
     CLKDIVbits.PLLPOST = 0;
-    while (OSCCONbits.LOCK != 1);
-    RCONbits.SWDTEN = 0; /* Disable Watch Dog Timer*/
+
+    // Initiate Clock Switch to FRC oscillator with PLL (NOSC=0b001)
+    __builtin_write_OSCCONH(0x01);
+    __builtin_write_OSCCONL(OSCCON | 0x01);
+
+    // Wait for Clock switch to occur
+    while (OSCCONbits.COSC != 0b001);
+
+    while (OSCCONbits.LOCK!= 1);
 
     source_addr.val32 = 0x1000;
 
@@ -75,6 +98,10 @@ int main(void)
         reset_device();
     }
 
+    /*Disable all interrupts*/
+    INTCON2bits.GIE = 0;
+
+    /*Timer setup */
     T2CONbits.T32 = 1; /* increments every instruction cycle */
     IFS0bits.T3IF = 0; /* Clear the Timer3 Interrupt Flag */
     IEC0bits.T3IE = 0; /* Disable Timer3 Interrup Service Routine */
@@ -90,21 +117,66 @@ int main(void)
     }
 
     /*Configure pins*/
-    /*Set all pins to input*/
-    TRISA = 0xFFFF;
+    /*Set all pins to input*/    
     TRISB = 0xFFFF;
+    TRISC = 0xFFFF;
+    TRISD = 0xFFFF;
+    TRISE = 0xFFFF;
+    TRISF = 0xFFFF;
+    TRISG = 0xFFFF;
 
     /*Configure all analog ports as digital I/O*/
-    ANSELA = 0x0;
-    ANSELB = 0x0;
+    ANSELB = 0;
+    ANSELC = 0;
+    ANSELD = 0;
+    ANSELE = 0;
+    ANSELG = 0;
 
+    /*LEDs*/
+    #define TRIS_LED1     TRISBbits.TRISB8
+    #define TRIS_LED2     TRISBbits.TRISB9
+    #define TRIS_LED3     TRISBbits.TRISB10
+    #define TRIS_LED4     TRISBbits.TRISB11
+
+    #define LED1     LATBbits.LATB8
+    #define LED2     LATBbits.LATB9
+    #define LED3     LATBbits.LATB10
+    #define LED4     LATBbits.LATB11
+    TRIS_LED1 = 0;
+    TRIS_LED2 = 0;
+    TRIS_LED3 = 0;
+    TRIS_LED4 = 0;
+
+    LED1 = LED2 = LED3 = LED4 = 0;
+
+    /*Disable modules that are not needed at this point*/
+    SPI1STATbits.SPIEN = 0;
+    SPI2STATbits.SPIEN = 0;
+    SPI3STATbits.SPIEN = 0;
+    SPI4STATbits.SPIEN = 0;
+
+    PTCONbits.PTEN = 0;
+
+    I2C1CONbits.I2CEN = 0;
+    I2C2CONbits.I2CEN = 0;
+
+    U1STAbits.UTXEN = 0;
+    U2STAbits.UTXEN = 0;
+    U3STAbits.UTXEN = 0;
+    U4STAbits.UTXEN = 0;
+
+    U1CONbits.USBEN = 0;
+
+    PMCONbits.PMPEN = 0;
+
+    LED1 = 1;
+    
 #ifdef BL_UART
     /* Serial version of the bootloader */
     char command;
 
-    TRISBbits.TRISB4 = 0; //RP36 is output (UART2TX)
-    RPINR19bits.U2RXR = 47; //pin 26==RPI47 is RX input
-    _RP36R = 0b11; //U2TX to RP36 (pin 11)
+    OUT_PIN_PPS_RP68 = OUT_FN_PPS_U2TX; //U2Tx
+    IN_FN_PPS_U2RX = IN_PIN_PPS_RP67; //U2Rx
 
     U2BRG = BRGVAL; /*  BAUD Rate Setting of Uart2  */
     U2MODE = 0x8000; /* Reset UART to 8-n-1, alt pins, and enable */
@@ -127,7 +199,7 @@ int main(void)
                 for (size = 0; size < PM_ROW_SIZE * 3; size++) {
                     get_char(&(buffer[size]));
                 }
-
+                LED4 = !LED4;
                 /*Erase the page*/
                 erase_33E(source_addr.word.HW, source_addr.word.LW);
                 write_PM(buffer, source_addr); /*program page */
@@ -165,6 +237,7 @@ int main(void)
 #ifndef BL_UART
     /* CAN version of the bootloader*/
     can_init();
+    LED2 = 1;
     can_states state = CAN_STATE_BOOTUP;
     uint8_t can_msg_received = 0;
     uint8_t can_msg_transmitted = 0;
@@ -175,7 +248,7 @@ int main(void)
     uint16_t sdo_OD_idx;
     uint8_t sdo_OD_sidx;
     uint16_t can_heartbeat_time = 100; /*Heartbeat producer period in ms*/
-    unsigned can_disable_boot_timeout = 0;
+    unsigned can_disable_boot_timeout = 1;
     ureg32_t delay_hb;
     unsigned can_receiving_prog_data = 0; /*is program data upload in progress?*/
     uint16_t can_prog_data_ctr = 0; /*number of data bytes received for data upload*/
@@ -186,6 +259,7 @@ int main(void)
     uint8_t can_segment_num_bytes;
     uint16_t can_num_segments_ctr;
     uint16_t i;
+    extern uint8_t txreq_bitarray;
 
     can_msg_rec.cob_id = 0;
     can_msg_rec.len = 0;
@@ -209,6 +283,20 @@ int main(void)
         T4CONbits.TON = 0;
     }
 
+    //TEST
+//    source_addr.val32 = 0x2000;//8372224L;
+//    erase_33E(source_addr.word.HW, source_addr.word.LW);
+//    for(i=0;i<1024*3;++i){
+//        buffer[i] = 'A';
+//    }
+//    buffer[0] = 'K';
+//    buffer[1] = 'e';
+//    buffer[2] = 'n';
+//    buffer[3] = '!';
+//    buffer[4] = '!';
+//    buffer[5] = '!';
+//    write_PM(buffer, source_addr);
+
     while(1){
         if(!can_disable_boot_timeout && IFS0bits.T3IF){
             /*Bootloader timeout*/
@@ -216,8 +304,41 @@ int main(void)
             reset_device();
         }
 
+	// Handle the non blocking CAN transmission sequence 
+		if (txreq_bitarray & 0b00000001 && !C1TR01CONbits.TXREQ0) {
+			C1TR01CONbits.TXREQ0 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11111110;
+		}
+		if (txreq_bitarray & 0b00000010 && !C1TR01CONbits.TXREQ1) {
+			C1TR01CONbits.TXREQ1 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11111101;
+		}
+		if (txreq_bitarray & 0b00000100 && !C1TR23CONbits.TXREQ2) {
+			C1TR23CONbits.TXREQ2 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11111011;
+		}
+		if (txreq_bitarray & 0b00001000 && !C1TR23CONbits.TXREQ3) {
+			C1TR23CONbits.TXREQ3 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11110111;
+		}
+		if (txreq_bitarray & 0b00010000 && !C1TR45CONbits.TXREQ4) {
+			C1TR45CONbits.TXREQ4 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11101111;
+		}
+		if (txreq_bitarray & 0b00100000 && !C1TR45CONbits.TXREQ5) {
+			C1TR45CONbits.TXREQ5 = 1;
+			txreq_bitarray = txreq_bitarray & 0b11011111;
+		}
+		if (txreq_bitarray & 0b01000000 && !C1TR67CONbits.TXREQ6) {
+			C1TR67CONbits.TXREQ6 = 1;
+			txreq_bitarray = txreq_bitarray & 0b10111111;
+		}
+
         /*Receive a CAN message*/
         can_msg_received = can_receive_msg(&can_msg_rec);
+        if(can_msg_received){
+            LED3 = !LED3;
+        }
         /* Clear transmitted interrupt flag */
         if (C1INTFbits.TBIF) {
             C1INTFbits.TBIF = 0; //message was transmitted, nothing to do
@@ -225,6 +346,10 @@ int main(void)
         }
         IFS2bits.C1IF = 0; //clear CAN interrupt flag
         
+        if(IFS1bits.T5IF){
+            LED2 = !LED2;
+        }
+
         /*State machine*/
         switch(state){
             case CAN_STATE_BOOTUP:
@@ -269,7 +394,7 @@ int main(void)
                                 Nop();
                                 Nop();
                                 Nop();
-                                break;
+                                //asm("RESET");
                                 break;
                             case 130: /*Reset communication*/
                                 /*TODO: do we need to do anything here?*/
@@ -338,7 +463,7 @@ int main(void)
                                         for (i = 0; i < PM_ROW_SIZE * 3; i++) {
                                             buffer[i] = can_prog_data[i+3];
                                         }
-
+                                        LED4 = !LED4;
                                         erase_33E(source_addr.word.HW, source_addr.word.LW);
                                         write_PM(buffer, source_addr);
                                         
@@ -472,36 +597,36 @@ int main(void)
                                             break;
                                         case 0x01:
                                             /*Vendor ID*/
-                                            can_exp_buffer[3] = 'N';
-                                            can_exp_buffer[2] = 'A';
-                                            can_exp_buffer[1] = 'S';
-                                            can_exp_buffer[0] = 'A';
+                                            can_exp_buffer[3] = CAN_VENDOR_ID[0];
+                                            can_exp_buffer[2] = CAN_VENDOR_ID[1];
+                                            can_exp_buffer[1] = CAN_VENDOR_ID[2];
+                                            can_exp_buffer[0] = CAN_VENDOR_ID[3];
                                             can_send_sdo_upload_response_expedited(sdo_OD_idx,sdo_OD_sidx, 0, can_exp_buffer);
                                             break;
                                         case 0x02:
                                             /*Product code: read device id*/
                                             source_addr.val32 = 0xFF0000;
                                             temp.val32 = read_latch(source_addr.word.HW, source_addr.word.LW);
-                                            can_exp_buffer[3] = temp.val[3];
-                                            can_exp_buffer[2] = temp.val[2];
-                                            can_exp_buffer[1] = temp.val[1];
-                                            can_exp_buffer[0] = temp.val[0];
+                                            can_exp_buffer[3] = temp.val[0];
+                                            can_exp_buffer[2] = temp.val[1];
+                                            can_exp_buffer[1] = temp.val[2];
+                                            can_exp_buffer[0] = temp.val[3];
                                             can_send_sdo_upload_response_expedited(sdo_OD_idx,sdo_OD_sidx, 0, can_exp_buffer);
                                             break;
                                         case 0x03:
                                             /*Revision number*/
-                                            can_exp_buffer[3] = 0;
-                                            can_exp_buffer[2] = 1;
-                                            can_exp_buffer[1] = 0;
-                                            can_exp_buffer[0] = 0;
+                                            can_exp_buffer[3] = CAN_REVISION_NUM[0];
+                                            can_exp_buffer[2] = CAN_REVISION_NUM[1];
+                                            can_exp_buffer[1] = CAN_REVISION_NUM[2];
+                                            can_exp_buffer[0] = CAN_REVISION_NUM[3];
                                             can_send_sdo_upload_response_expedited(sdo_OD_idx,sdo_OD_sidx, 0, can_exp_buffer);
                                             break;
                                         case 0x04:
                                             /*Serial number*/
-                                            can_exp_buffer[3] = 'K';
-                                            can_exp_buffer[2] = 'e';
-                                            can_exp_buffer[1] = 'n';
-                                            can_exp_buffer[0] = '.';
+                                            can_exp_buffer[3] = CAN_SERIAL_NUMBER[0];
+                                            can_exp_buffer[2] = CAN_SERIAL_NUMBER[1];
+                                            can_exp_buffer[1] = CAN_SERIAL_NUMBER[2];
+                                            can_exp_buffer[0] = CAN_SERIAL_NUMBER[3];
                                             can_send_sdo_upload_response_expedited(sdo_OD_idx,sdo_OD_sidx, 0, can_exp_buffer);
                                             break;
                                         default:
@@ -615,10 +740,12 @@ void write_buffer(char * ptr_data, int size) {
 /******************************************************************************/
 
 void write_PM(char * ptrData, ureg32_t source_addr) {
+#ifdef DOUBLE_WORD_WRITE
     ureg32_t temp[2];
     ureg32_t temp_addr;
     ureg32_t temp_data;
     unsigned i;
+
     for (i = 0; i < PM_ROW_SIZE; i += 2) {
         temp_addr.val32 = source_addr.val32 + (i<<1);
         temp[0].val[3] = 0; //phantom byte
@@ -631,6 +758,25 @@ void write_PM(char * ptrData, ureg32_t source_addr) {
         temp[1].val[0] = ptrData[i*3+3];
         write_pm_33E(temp_addr.word.HW, temp_addr.word.LW, temp);
     }
+#else
+    ureg32_t temp[128];
+    ureg32_t temp_addr;
+    ureg32_t temp_data;
+    unsigned i,j;
+    uint16_t row_offset;
+    //write a single program word
+    for(j=0;j<8;++j){
+        row_offset = j<<7;
+        for (i = 0; i < 128; i++) {
+            temp[i].val[3] = 0; //phantom byte
+            temp[i].val[2] = ptrData[i*3+2+row_offset];
+            temp[i].val[1] = ptrData[i*3+1+row_offset];
+            temp[i].val[0] = ptrData[i*3+row_offset];
+        }
+        temp_addr.val32 = source_addr.val32 + (row_offset<<1);
+        write_row_pm_33E(temp_addr.word.HW, temp_addr.word.LW, temp);
+    }
+#endif
 }
 
 /******************************************************************************/
