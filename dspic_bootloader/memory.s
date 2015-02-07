@@ -41,7 +41,7 @@
 ;********************************************************************/
 
 .include "p33Exxxx.inc"
-.global _write_row_pm_33E, _read_latch, _reset_device, _erase_33E, _write_pm_33E ;C called
+.global _write_row_pm_33E, _read_latch, _reset_internal_device, _erase_33E, _write_pm_33E ;C called
 
 _read_latch: 
 	mov	W0,TBLPAG
@@ -50,8 +50,8 @@ _read_latch:
 	tblrdh [W1],W1
 	return
 
-_reset_device:
-    goto 0x2000 ; Start address of the main code
+_reset_internal_device:
+    goto 0x2800 ; Start address of the main code
     NOP
     NOP
     NOP
@@ -126,7 +126,6 @@ _write_pm_33E:
     NOP
     NOP
     return
-
 
 
 

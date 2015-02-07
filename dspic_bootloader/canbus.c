@@ -21,7 +21,6 @@
  * governing permissions and limitations under the License.
  */
 #include <stdint.h>
-#include <pps.h>
 #include <dma.h>
 #include <ecan.h>
 #include <xc.h>
@@ -184,22 +183,6 @@ void Ecan1WriteRxAcptMask(int16_t m, int32_t identifier, uint16_t mide, uint16_t
 
 void can_init()
 {
-	// Sets up the correct pins for the Motor board
-        //__builtin_write_OSCCONL(OSCCON & ~(1<<6));
-        __builtin_write_OSCCONL(OSCCON & ~(1 << 6));
-        TRISFbits.TRISF4 = 1;//1
-        TRISFbits.TRISF5 = 0;//0
-        IN_FN_PPS_C1RX = IN_PIN_PPS_RP100; //C1Rx
-	OUT_PIN_PPS_RP101 = OUT_FN_PPS_C1TX; //C1Tx
-        //RPINR26bits.C1RXR = 100;
-        //RPOR9bits.RP100R = 0b001110;
-        //IN_FN_PPS_C1RX = IN_PIN_PPS_RP100; //C1Rx
-        //OUT_PIN_PPS_RP101 = OUT_FN_PPS_C1TX; //C1Tx
-
-        //Lock PPS Registers
-        //__builtin_write_OSCCONL(OSCCON | (1 << 6));
-        __builtin_write_OSCCONL(OSCCON | (1 << 6));
-	
 	unsigned int config;
 	unsigned int irq;
 	unsigned long int stb_address;
@@ -421,14 +404,14 @@ uint8_t can_receive_msg(Message *m)
 		}
 
 		// Make sure to clear the interrupt flag.
-		C1RXFUL1 = 0;
-//                IFS3bits.DMA5IF = 0;
-//                IFS2bits.DMA4IF = 0;
-//                CAN1ClearRXFUL1();
-//                CAN1ClearRXFUL2();
-//                CAN1ClearRXOVF1();
-//                CAN1ClearRXOVF2();
-//                IFS2bits.C1IF = 0;
+//		C1RXFUL1 = 0;
+                IFS3bits.DMA5IF = 0;
+                IFS2bits.DMA4IF = 0;
+                CAN1ClearRXFUL1();
+                CAN1ClearRXFUL2();
+                CAN1ClearRXOVF1();
+                CAN1ClearRXOVF2();
+                IFS2bits.C1IF = 0;
 
 		C1INTFbits.RBIF = 0;
 		return 1;

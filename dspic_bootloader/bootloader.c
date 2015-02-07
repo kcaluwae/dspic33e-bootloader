@@ -28,30 +28,28 @@
  */
 #include <stdint.h>
 #include <pps.h>
+#include <qei32.h>
 #include "p33Exxxx.h"
 #include "bootloader.h"
 #include "canbus.h"
 
-//_FOSCSEL(FNOSC_FRCPLL & IESO_OFF & PWMLOCK_OFF);
-///*PWMLOCK_OFF needed to configure PWM*/
-//_FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_NONE);
-//_FWDT(FWDTEN_OFF);
-///* Disable JTAG */
-//_FICD(JTAGEN_OFF); /* & ICS_PGD2);*/
-//_FGS(GCP_OFF); /* Disable Code Protection */
-
 /*DO NOT USE CONFIGURATION MEMORY (it triggers code protection in the bootloader) */
 _FGS(GWRP_OFF & GSS_OFF & GSSK_OFF); // Disable Code Protection
 _FOSCSEL(FNOSC_FRC & IESO_OFF);
-_FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_NONE);
+_FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_NONE & IOL1WAY_OFF); //FUCK IOL1WAY!
 _FWDT(FWDTEN_OFF);
 _FICD(ICS_PGD1 & JTAGEN_OFF);// & RSTPRI_AF);
 
 
 /*defined in memory.s*/
 extern uint32_t read_latch(uint16_t, uint16_t);
-extern void reset_device();
-//extern void write_row_pm_33E(uint16_t,uint16_t,ureg32_t*);
+extern void reset_internal_device();
+extern void write_row_pm_33E(uint16_t,uint16_t,ureg32_t*);
+
+void reset_device()
+{
+    reset_internal_device();
+}
 
 /*This buffer is used to write/read program memory internally*/
 char buffer[PM_ROW_SIZE * 3 + 1];
@@ -65,18 +63,27 @@ int main(void)
  {
     ureg32_t source_addr;
     ureg32_t delay;
+
+    //Make sure the DRV8301 doesn't accidently turn on
+    LATGbits.LATG7 = 0;
+    TRISGbits.TRISG7 = 0; //EN_GATE!
+    LATGbits.LATG7 = 0;
+
+    //PPS for the CAN bus
+        __builtin_write_OSCCONL(OSCCON & ~(1 << 6));
+
+        IN_FN_PPS_C1RX = IN_PIN_PPS_RP100; //C1Rx
+	OUT_PIN_PPS_RP101 = OUT_FN_PPS_C1TX; //C1Tx
+
+        __builtin_write_OSCCONL(OSCCON | (1 << 6));
+
+
     /*
      * 70 MIPS:
      * FOSC = Fin*(PLLDIV+2)/((PLLPRE+2)*2(PLLPOST+1))
      * FOSC = 7.37MHz(74+2)/((0+2)*2(0+1)) = 140.03Mhz
      * Fcy = FOSC/2
      */
-//    PLLFBD = 74;
-//    CLKDIVbits.PLLPRE = 0;
-//    CLKDIVbits.PLLPOST = 0;
-//    while (OSCCONbits.LOCK != 1);
-//    RCONbits.SWDTEN = 0; /* Disable Watch Dog Timer*/
-
     PLLFBD = 74;
     CLKDIVbits.PLLPRE = 0;
     CLKDIVbits.PLLPOST = 0;
@@ -87,7 +94,6 @@ int main(void)
 
     // Wait for Clock switch to occur
     while (OSCCONbits.COSC != 0b001);
-
     while (OSCCONbits.LOCK!= 1);
 
     source_addr.val32 = 0x1000;
@@ -97,9 +103,6 @@ int main(void)
     if (delay.val[0] == 0) {
         reset_device();
     }
-
-    /*Disable all interrupts*/
-    INTCON2bits.GIE = 0;
 
     /*Timer setup */
     T2CONbits.T32 = 1; /* increments every instruction cycle */
@@ -115,22 +118,6 @@ int main(void)
         TMR2 = 0x0000;
         T2CONbits.TON = 1;
     }
-
-    /*Configure pins*/
-    /*Set all pins to input*/    
-    TRISB = 0xFFFF;
-    TRISC = 0xFFFF;
-    TRISD = 0xFFFF;
-    TRISE = 0xFFFF;
-    TRISF = 0xFFFF;
-    TRISG = 0xFFFF;
-
-    /*Configure all analog ports as digital I/O*/
-    ANSELB = 0;
-    ANSELC = 0;
-    ANSELD = 0;
-    ANSELE = 0;
-    ANSELG = 0;
 
     /*LEDs*/
     #define TRIS_LED1     TRISBbits.TRISB8
@@ -148,26 +135,6 @@ int main(void)
     TRIS_LED4 = 0;
 
     LED1 = LED2 = LED3 = LED4 = 0;
-
-    /*Disable modules that are not needed at this point*/
-    SPI1STATbits.SPIEN = 0;
-    SPI2STATbits.SPIEN = 0;
-    SPI3STATbits.SPIEN = 0;
-    SPI4STATbits.SPIEN = 0;
-
-    PTCONbits.PTEN = 0;
-
-    I2C1CONbits.I2CEN = 0;
-    I2C2CONbits.I2CEN = 0;
-
-    U1STAbits.UTXEN = 0;
-    U2STAbits.UTXEN = 0;
-    U3STAbits.UTXEN = 0;
-    U4STAbits.UTXEN = 0;
-
-    U1CONbits.USBEN = 0;
-
-    PMCONbits.PMPEN = 0;
 
     LED1 = 1;
     

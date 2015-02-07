@@ -44,7 +44,7 @@ extern "C" {
 #define PM_ROW_SIZE     1024
 #define FCY             70000000 //70Mhz
 #define BOOT_DELAY      10  /*Bootloader timeout in seconds*/
-#define CAN_NODE_ID 0x72
+#define CAN_NODE_ID 0x02
 #define MOTOR_BOARD
 //#ifndef MOTOR_BOARD
 #define DOUBLE_WORD_WRITE //for some reason the ROW programming mode only works for a single page

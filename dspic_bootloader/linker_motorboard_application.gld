@@ -54,7 +54,7 @@ MEMORY
   data  (a!xr)   : ORIGIN = 0x1000,        LENGTH = 0x7000
   reset          : ORIGIN = 0x0,          LENGTH = 0x4
   ivt            : ORIGIN = 0x4,           LENGTH = 0x1FC
-  program (xr)   : ORIGIN = 0x2000,         LENGTH = 0x28A00 /*MODIFY BOTH THE ORIGIN AND LENGTH!!!*/
+  program (xr)   : ORIGIN = 0x2800,         LENGTH = 0x28200 /*MODIFY BOTH THE ORIGIN AND LENGTH!!!*/
   auxflash (xr)  : ORIGIN = 0x7FC000,      LENGTH = 0x3FFA
   FGS            : ORIGIN = 0xF80004,      LENGTH = 0x2
   FOSCSEL        : ORIGIN = 0xF80006,      LENGTH = 0x2
@@ -74,8 +74,8 @@ __FPOR = 0xF8000C;
 __FICD = 0xF8000E;
 __FAS = 0xF80010;
 __FUID0 = 0xF80012;
-__CODE_BASE = 0x2000; /*MODIFY BOTH THE ORIGIN AND LENGTH!!!*/
-__CODE_LENGTH = 0x28A00;
+__CODE_BASE = 0x2800; /*MODIFY BOTH THE ORIGIN AND LENGTH!!!*/
+__CODE_LENGTH = 0x28200;
 __IVT_BASE  = 0x4;
 
 __DATA_BASE = 0x1000;
