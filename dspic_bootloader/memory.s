@@ -51,7 +51,7 @@ _read_latch:
 	return
 
 _reset_internal_device:
-    goto 0x2800 ; Start address of the main code
+    goto 0x2000 ; Start address of the main code
     NOP
     NOP
     NOP

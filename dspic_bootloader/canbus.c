@@ -28,10 +28,10 @@
 #include "canbus.h"
 #ifndef BL_UART
 /*CAN message buffers*/
-//static unsigned int ecan1RXMsgBuf[8][8] __attribute__((aligned(8 * 16)));
-//static unsigned int ecan1TXMsgBuf[8][8] __attribute__((aligned(8 * 16)));
-__eds__ static unsigned int ecan1RXMsgBuf[8][8] __attribute__((eds,space(dma),aligned(8 * 16)));
-__eds__ static unsigned int ecan1TXMsgBuf[8][8] __attribute__((eds,space(dma),aligned(8 * 16)));
+static unsigned int ecan1RXMsgBuf[8][8] __attribute__((aligned(8 * 16)));
+static unsigned int ecan1TXMsgBuf[8][8] __attribute__((aligned(8 * 16)));
+//__eds__ static unsigned int ecan1RXMsgBuf[8][8] __attribute__((eds,space(dma),aligned(8 * 16)));
+//__eds__ static unsigned int ecan1TXMsgBuf[8][8] __attribute__((eds,space(dma),aligned(8 * 16)));
 
 
 uint8_t txreq_bitarray = 0;
@@ -205,7 +205,7 @@ void can_init()
 	//1Mbaud
 	// Setup our frequencies for time quanta calculations.
 	// FCAN is selected to be FCY*2 = FP*2 = 140Mhz
-	C1CTRL1bits.CANCKS = 0;  // 0 => FP*2; 1 => FP (MU806 only)
+	C1CTRL1bits.CANCKS = 1;  // 0 => FP*2; 1 => FP (MU806 only, see errata)
 	C1CFG1bits.BRP = 6; //6 = (140MHz/(2*(10*1Mbaud)))-1 [10 TQ/bit = Bit Time]
 	// Based on Bit Time
 	// 10 = 1(SJW) + 4(Propagation Seg.) + 3(Phase Seg. 1) + 2(Phase Seg. 2)
@@ -236,75 +236,52 @@ void can_init()
 	C1TR67CONbits.TXEN7 = 0;
 
 
-//	//CONFIG DMA
-//	//TX
-//	DMA1CONbits.SIZE = 0; //word transfer mode
-//	DMA1CONbits.DIR = 0x1; //RAM to peripheral
-//	DMA1CONbits.AMODE = 0x2; //peripheral indirect addressing mode
-//	DMA1CONbits.MODE = 0x0; //continuous, no ping-pong
-//	DMA1REQ = 70; // CAN1 TX
-//	DMA1CNT = 7; // 8 words per transfer
-//	DMA1PAD = (volatile unsigned int) &C1TXD;
-//	DMA1STAL = (unsigned int) ecan1TXMsgBuf;
-//	DMA1STAH = 0x0;
-//
-//	//RX
-//	DMA0CONbits.SIZE = 0;
-//	DMA0CONbits.DIR = 0; //Read to RAM from peripheral
-//	DMA0CONbits.AMODE = 2; // Continuous mode, single buffer
-//	DMA0CONbits.MODE = 0; // Peripheral Indirect Addressing
-//	DMA0REQ = 34; // CAN1 RX
-//	DMA0CNT = 7; // 8 words per transfer
-//	DMA0PAD = (volatile unsigned int) &C1RXD;
-//	DMA0STAL = (unsigned int) ecan1RXMsgBuf;
-//	DMA0STAH = 0x0;
-//
-//
-//	// Enable DMA
-//	IFS0bits.DMA0IF = 0;
-//	IFS0bits.DMA1IF = 0;
-//	DMA0CONbits.CHEN = 1;
-//	DMA1CONbits.CHEN = 1;
-//	IEC0bits.DMA0IE = 0; // Disable DMA Channel 0 interrupt (everything is handled in the CAN interrupt)
-//	IEC0bits.DMA1IE = 0;
-//
-//	Ecan1WriteRxAcptFilter(7, 0x000, 0, 7, 0);
-//	Ecan1WriteRxAcptMask(0, 0x000, 0, 0);
+	//CONFIG DMA
+	//TX
+	DMA1CONbits.SIZE = 0; //word transfer mode
+	DMA1CONbits.DIR = 0x1; //RAM to peripheral
+	DMA1CONbits.AMODE = 0x2; //peripheral indirect addressing mode
+	DMA1CONbits.MODE = 0x0; //continuous, no ping-pong
+	DMA1REQ = 70; // CAN1 TX
+	DMA1CNT = 7; // 8 words per transfer
+	DMA1PAD = (volatile unsigned int) &C1TXD;
+	DMA1STAL = (unsigned int) ecan1TXMsgBuf;
+	DMA1STAH = 0x0;
+        config = DMA1CON|0b1000000000000000;
+        irq = 70; //CAN TX
+        count = 7;   //8 words per transfer
+        pad_address = (volatile unsigned int)&C1TXD;
+        //sta_address = ecan1MsgBuf;
+        stb_address = 0x0;
+        OpenDMA1( config, irq, (long unsigned int)ecan1TXMsgBuf,
+        stb_address,pad_address, count );
 
-        //TX
-	DMA5CONbits.SIZE = 0; //word transfer mode
-	DMA5CONbits.DIR = 0x1; //RAM to peripheral
-	DMA5CONbits.AMODE = 0x2; //peripheral indirect addressing mode
-	DMA5CONbits.MODE = 0x0; //continuous, no ping-pong
-	DMA5REQ = 70; // CAN1 TX
-	DMA5CNT = 7; // 8 words per transfer
-	DMA5PAD = (volatile unsigned int) &C1TXD;
-	DMA5STAL = (unsigned int) ecan1TXMsgBuf;
-	DMA5STAH = 0x0;
+	//RX
+	DMA0CONbits.SIZE = 0;
+	DMA0CONbits.DIR = 0; //Read to RAM from peripheral
+	DMA0CONbits.AMODE = 2; // Continuous mode, single buffer
+	DMA0CONbits.MODE = 0; // Peripheral Indirect Addressing
+	DMA0REQ = 34; // CAN1 RX
+	DMA0CNT = 7; // 8 words per transfer
+	DMA0PAD = (volatile unsigned int) &C1RXD;
+	DMA0STAL = (unsigned int) ecan1RXMsgBuf;
+	DMA0STAH = 0x0;
+        config = DMA0CON|0b1000000000000000;
+        irq = 0x22;// Select ECAN1 RX as DMA Request source
+        count = 7;   //8 words per transfer
+        //DMA0CONbits.CHEN = 1; // Enable DMA Channel 0
+        pad_address = (volatile unsigned int)&C1RXD;
+        stb_address = 0x0;
+        OpenDMA0( config, irq, (long unsigned int)ecan1RXMsgBuf,
+        stb_address,pad_address, count );
 
-	// RX
-	DMA4CONbits.SIZE = 0;
-	DMA4CONbits.DIR = 0; //Read to RAM from peripheral
-	DMA4CONbits.AMODE = 2; // Continuous mode, single buffer
-	DMA4CONbits.MODE = 0; // Peripheral Indirect Addressing
-	DMA4REQ = 34; // CAN1 RX
-	DMA4CNT = 7; // 8 words per transfer
-	DMA4PAD = (volatile unsigned int) &C1RXD;
-	DMA4STAL = (unsigned int) ecan1RXMsgBuf;
-	DMA4STAH = 0x0;
 
 	// Enable DMA
-	IFS3bits.DMA5IF = 0;
-	IFS2bits.DMA4IF =	 0;
-	DMA5CONbits.CHEN = 1;
-	DMA4CONbits.CHEN = 1;
-	DisableIntDMA5; // Disable DMA interrupt (everything is handled in the CAN interrupt)
-	DisableIntDMA4;
+        IFS0bits.DMA0IF = 0;
+        DMA0CONbits.CHEN = 1;
+        DMA1CONbits.CHEN = 1;
         IEC0bits.DMA0IE = 0; // Disable DMA Channel 0 interrupt (everything is handled in the CAN interrupt)
-//	IEC0bits.DMA1IE = 0;
 
-//	Ecan1WriteRxAcptFilter(7,0x000,0,7,0);
-//	Ecan1WriteRxAcptMask(0,0x000,0,0);
 	C1CTRL1bits.WIN=0x1;
 	C1FMSKSEL1bits.F7MSK = 0x0;
 	C1RXM0SIDbits.SID = 0x00;
@@ -314,6 +291,7 @@ void can_init()
 	C1BUFPNT2bits.F7BP = 7;
 	C1FEN1bits.FLTEN7 = 1;
 	C1CTRL1bits.WIN=0x0;
+
 
 	// Place ECAN1 into normal mode
 	desired_mode = 0b000;
@@ -404,9 +382,8 @@ uint8_t can_receive_msg(Message *m)
 		}
 
 		// Make sure to clear the interrupt flag.
-//		C1RXFUL1 = 0;
-                IFS3bits.DMA5IF = 0;
-                IFS2bits.DMA4IF = 0;
+                IFS0bits.DMA1IF = 0;
+                IFS0bits.DMA0IF = 0;
                 CAN1ClearRXFUL1();
                 CAN1ClearRXFUL2();
                 CAN1ClearRXOVF1();

@@ -44,11 +44,40 @@ extern "C" {
 #define PM_ROW_SIZE     1024
 #define FCY             70000000 //70Mhz
 #define BOOT_DELAY      10  /*Bootloader timeout in seconds*/
-#define CAN_NODE_ID 0x02
-#define MOTOR_BOARD
+#define CAN_NODE_ID 0x03
+//#define MOTOR_BOARD
 //#ifndef MOTOR_BOARD
 #define DOUBLE_WORD_WRITE //for some reason the ROW programming mode only works for a single page
 //#endif
+
+#define LED_R       LATAbits.LATA12
+#define LED_G       LATAbits.LATA11
+#define LED_B       LATAbits.LATA0
+#define LED_STATUS  LATAbits.LATA1
+
+#define EN_BACKUP_5V5       LATDbits.LATD5
+#define EN_VBAT_5V5         LATDbits.LATD6 //Enables the output of Buck to 5v5 rail
+#define VBAT_5V5_EN         LATAbits.LATA10 //Enables the Buck IC
+#define KILLSWITCH_uC       LATAbits.LATA8
+
+//RF Pins
+#define RF_GND_EN           LATBbits.LATB13
+
+#define BUZZER              LATGbits.LATG8
+
+//5V5 Output Control Pins
+#define EN_OUT_1            LATBbits.LATB9
+#define EN_OUT_2            LATCbits.LATC6
+#define EN_OUT_3            LATCbits.LATC13
+#define EN_OUT_4            LATBbits.LATB8
+
+//RF SPI Control
+#define RF_IRQ              PORTGbits.RG9
+#define RF_CE               LATAbits.LATA7
+#define RF_CSN              LATBbits.LATB0
+#define RF_MISO             LATAbits.LATA9
+#define RF_GND_EN           LATBbits.LATB13
+
 static const char CAN_DEVICE_TYPE[] = "boot";       /*4 bytes*/
 static const char CAN_VENDOR_ID[] = "NASA";         /*4 bytes*/
 static const uint8_t CAN_REVISION_NUM[] = {0,1,0,1};/*4 bytes*/
