@@ -66,75 +66,42 @@ int main(void)
     ureg32_t delay;
 
     //Set all pins to input
-    TRISA = 0xFFFF;
-    TRISB = 0xFFFF;
-    TRISC = 0xFFFF;
-    TRISD = 0xFFFF;
-    TRISE = 0xFFFF;
-    TRISF = 0xFFFF;
-    TRISG = 0xFFFF;
+  TRISA = 0xFFFF;
+  TRISB = 0xFFFF;
+  TRISC = 0xFFFF;
+  TRISD = 0xFFFF;
+  TRISE = 0xFFFF;
+  TRISF = 0xFFFF;
+  TRISG = 0xFFFF;
 
-    //5V5 Output Control Pins
-    TRISBbits.TRISB9 = 0;   //EN_OUT_1
-    TRISCbits.TRISC6 = 0;   //EN_OUT_2
-    TRISCbits.TRISC13 = 0;  //EN_OUT_3
-    TRISBbits.TRISB8 = 0;   //EN_OUT_4
+  //Configure all analog ports as digital I/O
+  ANSELA = 0x0;
+  ANSELB = 0x0;
+  ANSELC = 0x0;
+  ANSELE = 0x0;
 
-    //5V5 Output Control Pins (make sure the BBB doesn't reboot)
-    EN_OUT_1 = 1;
-    EN_OUT_2 = 1;
-    EN_OUT_3 = 0;
-    EN_OUT_4 = 0;
+  /*
+   * Watchdog
+   */
+  PTGCONbits.PTGWDT = 0b000; //watchdog disabled
 
-    EN_BACKUP_5V5 = 1;
-    EN_VBAT_5V5 = 0;
-    VBAT_5V5_EN = 0;
-    //Diables Motor Output
-    KILLSWITCH_uC = 0;
+  /*
+   * CAN
+   */
+  TRISCbits.TRISC8 = 0; //TX = output
+  _RP56R = 0b001110; //TX
+  RPINR26bits.C1RXR = 55; //RX RP55
 
-    //Configure all analog ports as digital I/O
-    ANSELA = 0x0;
-    ANSELB = 0x0;
-    ANSELC = 0x0;
-    ANSELE = 0x0;
-
-    TRISGbits.TRISG8 = 0;	// BUZZER
-    BUZZER = 0;
-
-    //Watchdog
-    PTGCONbits.PTGWDT = 0b000; //watchdog disabled
-
-    //LEDs
-    TRISAbits.TRISA12 = 0;  //LED_R
-    TRISAbits.TRISA11 = 0;  //LED_G
-    TRISAbits.TRISA0 = 0;   //LED_B
-    TRISAbits.TRISA1 = 0;   //LED_STATUS
-
-    //Power & Motor Enable Pins
-    TRISDbits.TRISD5 = 0;   //EN_BACKUP_5V5
-    TRISDbits.TRISD6 = 0;   //EN_VBAT_5V5
-    TRISAbits.TRISA10 = 0;  //VBAT_5V5_EN
-    TRISAbits.TRISA8 = 0;   //KILLSWITCH_uC
-    CNPUBbits.CNPUB7 = 1;   //Internal Pull-Up
-    PTCONbits.PTEN = 0;     //just to make sure that the PWM is disabled
-
-     /*
-     * CAN
-     */
-    TRISCbits.TRISC8 = 0; //TX = output
-    _RP56R = 0b001110;//TX
-    RPINR26bits.C1RXR = 55; //RX RP55
-
-    //Backup bMCP73832attery charger disabled
-    TRISBbits.TRISB15 = 1;
-
-    TRISBbits.TRISB13 = 0;	// RF_GND_EN
-    TRISBbits.TRISB0 = 0;	// RF_CSN
-    TRISAbits.TRISA4 = 0;	// RF_MOSI
-    TRISAbits.TRISA7 = 0;	// RF_CE
-    RF_CSN = 1; // default value
-    RF_CE = 0;
-
+  //LEDs
+  TRISGbits.TRISG6 = 0;
+  _RP118R = 0;
+  TRISGbits.TRISG8 = 0;
+  _RP120R = 0;
+  TRISAbits.TRISA0 = 0;
+  TRISDbits.TRISD6 = 0;
+  TRISDbits.TRISD5 = 0;
+  TRISCbits.TRISC13 = 0;
+  TRISDbits.TRISD8 = 0;
 
     /*
      * 70 MIPS:
@@ -179,10 +146,10 @@ int main(void)
         T2CONbits.TON = 1;
     }
 
-    LED_R = 1;
-    LED_G = 1;
-    LED_B = 1;
-    LED_STATUS = 1;
+    RGB_RED = 1;
+    RGB_GREEN = 1;
+    RGB_BLUE = 1;
+    LED_1 = 1;
     
 #ifdef BL_UART
     /* Serial version of the bootloader */
@@ -250,7 +217,7 @@ int main(void)
 #ifndef BL_UART
     /* CAN version of the bootloader*/
     can_init();
-    LED_R = 0;
+    RGB_RED = 0;
     can_states state = CAN_STATE_BOOTUP;
     uint8_t can_msg_received = 0;
     uint8_t can_msg_transmitted = 0;
@@ -336,7 +303,7 @@ int main(void)
         /*Receive a CAN message*/
         can_msg_received = can_receive_msg(&can_msg_rec);
         if(can_msg_received){
-            LED_B = !LED_B;
+            RGB_BLUE = !RGB_BLUE;
         }
         /* Clear transmitted interrupt flag */
         if (C1INTFbits.TBIF) {
@@ -346,7 +313,7 @@ int main(void)
         IFS2bits.C1IF = 0; //clear CAN interrupt flag
         
         if(IFS1bits.T5IF){
-            LED_STATUS = !LED_STATUS;
+            LED_2 = !LED_2;
         }
 
         /*State machine*/
@@ -462,8 +429,8 @@ int main(void)
                                         for (i = 0; i < PM_ROW_SIZE * 3; i++) {
                                             buffer[i] = can_prog_data[i+3];
                                         }
-                                        LED_G = !LED_G;
-                                        LED_R = LED_G;
+                                        RGB_GREEN = !RGB_GREEN;
+                                        RGB_RED = RGB_GREEN;
                                         erase_33E(source_addr.word.HW, source_addr.word.LW);
                                         write_PM(buffer, source_addr);
                                         
